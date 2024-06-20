@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -24,7 +24,7 @@ async function run() {
   const eventCollections = database.collection("events");
   try {
     await client.connect();
-    console.log("Database successfully connected!");
+    console.log("Database successfully connected");
 
     app.get("/", (req, res) => {
       res.send("Event server is running");
@@ -37,11 +37,43 @@ async function run() {
         .then((events) => res.json(events))
         .catch((error) => console.error(error));
     });
+
+    app.post("/events", async (req, res) => {
+      const newEvent = req.body;
+      try {
+        const result = await eventCollections.insertOne(newEvent);
+        res.status(201).json({ insertedId: result.insertedId });
+      } catch (error) {
+        console.error("Error inserting event:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while adding the event." });
+      }
+    });
+
+    app.delete("/events/:id", async (req, res) => {
+      const id = req.params.id;
+      try {
+        const result = await eventCollections.deleteOne({
+          _id: new ObjectId(id),
+        });
+        if (result.deletedCount === 1) {
+          res.status(200).json({ message: "Event deleted successfully" });
+        } else {
+          res.status(404).json({ message: "Event not found" });
+        }
+      } catch (error) {
+        console.error("Error deleting event:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while deleting the event." });
+      }
+    });
   } finally {
   }
 }
 run().catch(console.dir);
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+  console.log(`App listening on port ${port}`);
 });
